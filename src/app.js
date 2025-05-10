@@ -5,8 +5,13 @@ const User = require('./models/user');
 const { validateSignupData } = require('./utils/validation');
 const bcrypt = require('bcrypt');
 const validator = require('validator');
+const cookieParser = require('cookie-parser');
+const { userAuth } = require('./middlewares/auth');
 
 app.use(express.json());
+app.use(cookieParser());
+
+secretKey = "this is a secret key";
 
 app.post('/signup', async (req, res) => {
     try {
@@ -16,7 +21,6 @@ app.post('/signup', async (req, res) => {
         // encrypt the password
         const { password } = req?.body;
         const passwordHash = await bcrypt.hash(password, 10);
-        console.log('salt ', passwordHash);
 
         const user = new User ({
             ...req.body,
@@ -52,7 +56,7 @@ app.post('/login', async (req, res) => {
             emailId
         });
 
-        const isPasswordValid = await bcrypt.compare(password, user?.password);
+        const isPasswordValid = await user.validatePassword(password);
         if(!isPasswordValid) {
             const errorObj = {
                 status: false,
@@ -60,18 +64,32 @@ app.post('/login', async (req, res) => {
             }
             throw new Error(JSON.stringify(errorObj));
         }
+
+        const token = await user?.getJWT();
+
+        res.cookie("token", token, { expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }); // expires in 7 days
         res.send({
             status: true,
             message: 'Login successful',
-            userId: user?.id
+            userId: user?._id
         })
+    }
+    catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.get('/profile', userAuth, async (req, res) => {
+    try {
+        const user = req.user;
+        res.send(user);
     }
     catch (err) {
         res.status(500).send(err.message);
     }
 })
 
-app.post('/user', async (req, res) => {
+app.post('/user', userAuth, async (req, res) => {
     const { emailId } = req.body;
 
     try {
