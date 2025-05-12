@@ -37,6 +37,35 @@ const validateSignupData = (req) => {
     }
 }
 
+const validateProfileEditData = (req) => {
+    const allowedFields = ["firstName", "lastName", "photoUrl", "gender", "age", "skills", "about"];
+    const dataToUpdate = req?.body;
+    try {
+        const keys = Object.keys(dataToUpdate);
+        const isValidFields = keys.every((key) => allowedFields.includes(key));
+        if(!isValidFields) {
+            const errorObj = {
+                status: false,
+                message: 'Invalid fields'
+            }
+            throw new Error(errorObj);
+        }
+
+        return {
+        status: true,
+        message: 'Valid data'
+    }
+    }
+    catch (err) {
+        const errorObj = {
+            status: false,
+            message: 'Invalid fields'
+        }
+        throw new Error(JSON.stringify(errorObj));
+    }
+}
+
 module.exports = {
-    validateSignupData
+    validateSignupData,
+    validateProfileEditData
 }
